@@ -1,52 +1,38 @@
-// import { save, load } from '../helpers/storage';
+import { saveLocal, loadLocal } from '../helpers/storage';
 
-const inputElement = document.querySelector('input');
-const textareaElement = document.querySelector('textarea');
-const formEl = document.querySelector('.feedback-form');
+const throttle = require('lodash.throttle');
 
-const saveLocal = (key, value) => {
-  try {
-    const serializedState = JSON.stringify(value);
-    localStorage.setItem(key, serializedState);
-  } catch (error) {
-    console.error('Set state error: ', error.message);
+const formElement = document.querySelector('.feedback-form');
+const LOCAL_KEY = 'feedback-form-state';
+
+let storageObg = {};
+
+formElement.addEventListener('input', throttle(addLocalStorage, 500));
+formElement.addEventListener('submit', onSubmit);
+
+function addLocalStorage(e) {
+  storageObg[e.target.name] = e.target.value;
+  saveLocal(LOCAL_KEY, storageObg);
+}
+
+function onSubmit(e) {
+  e.preventDefault();
+  if (formElement.email.value === '' || formElement.message.value === '') {
+    return alert('Є незаповнені поля!!!');
   }
-};
+  console.log(loadLocal(LOCAL_KEY));
+  localStorage.removeItem(LOCAL_KEY);
+  formElement.reset();
+  storageObg = {};
+}
 
-const loadLocal = key => {
-  try {
-    const serializedState = localStorage.getItem(key);
-    return serializedState === null ? undefined : JSON.parse(serializedState);
-  } catch (error) {
-    console.error('Get state error: ', error.message);
+function checkInput(e) {
+  const sevaedElement = localStorage.getItem(LOCAL_KEY);
+  if (sevaedElement) {
+    storageObg = JSON.parse(sevaedElement);
+    for (let key in storageObg) {
+      formElement[key].value = storageObg[key];
+    }
   }
-};
-
-let localStorageObg = {
-  email: '',
-  message: '',
-};
-
-inputElement.value = loadLocal('feedback-form-state').email ?? '';
-textareaElement.value = loadLocal('feedback-form-state').message ?? '';
-
-inputElement.addEventListener('input', addLocalStorageEmail);
-function addLocalStorageEmail(e) {
-  localStorageObg.email = e.currentTarget.value;
-  saveLocal('feedback-form-state', localStorageObg);
 }
-
-textareaElement.addEventListener('input', addLocalStorageMessage);
-function addLocalStorageMessage(e) {
-  localStorageObg.message = e.currentTarget.value;
-  saveLocal('feedback-form-state', localStorageObg);
-}
-
-formEl.addEventListener('submit', addConsole);
-function addConsole(event) {
-  event.preventDefault();
-  console.log(loadLocal('feedback-form-state'));
-  localStorage.clear();
-  inputElement.value = '';
-  textareaElement.value = '';
-}
+checkInput();
